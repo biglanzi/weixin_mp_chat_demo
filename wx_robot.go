@@ -98,17 +98,12 @@ func GetWxAccessTokenLoop() {
 	go func() {
 		defer log.Panic()
 		for {
-			time.Sleep(time.Minute * time.Duration(sysCfg.InterVal))
-			for {
-				err = getWxAccessToken()
-				if err != nil {
-					fmt.Println(err.Error())
-					time.Sleep(time.Second)
-					continue
+			select {
+			case <-time.After(time.Second * time.Duration(sysCfg.InterVal)):
+				if err := getWxAccessToken(); err != nil {
+					log.Println("get token fail,", err)
 				}
-				break
 			}
-
 		}
 	}()
 }
@@ -133,17 +128,14 @@ func getWxAccessToken() (err error) {
 		return
 	}
 	req.Header.Add("HTTPS_TYPE", "2")
-
 	client := &http.Client{}
-	var res *http.Response
-	res, err = client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return
 	}
 
-	var body []byte
-	body, err = ioutil.ReadAll(res.Body)
-	res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
 		return
 	}
